@@ -1,0 +1,96 @@
+.main-box {
+  margin-top: 50px;
+  border: solid white 2px;
+  border-radius: 25px;
+  margin-bottom: 80px;
+  padding-bottom: 50px;
+
+  /* padding: 40px; */
+  /* display: flex;
+  align-items: center; 
+  justify-content: center; */
+}
+
+.crypto-img {
+  padding-top: 10px;
+  padding-bottom: 10px;
+  border-radius: 40px;
+}
+
+.img-div {
+  display: flex;
+  justify-content: center;
+}
+
+.div-button {
+  padding-top: 20px;
+  padding-bottom: 10px;
+  display: flex;
+  justify-content: center;
+}
+
+.button-div {
+  display: flex;
+  justify-content: center;
+  padding-top: 20px;
+  padding-bottom: 40px;
+}
+
+.circularProgress-div {
+  padding-top: 5px;
+  text-align: center;
+}
+
+.buttonSendToken {
+  margin-top: 10px;
+  margin-left: 5px;
+  padding: 10px;
+  border-radius: 5px;
+}
+
+.cards {
+  background: #120e43 !important;
+  box-shadow: 2px 4px 8px 2px rgba(67, 59, 78, 0.473);
+  transition: 0.1s;
+  margin-top: 30px;
+  width: 100%;
+  border-radius: 10px;
+}
+
+.input-box {
+  padding-left: 150px;
+  padding-right: 150px;
+}
+
+.forgetpassdiv {
+  display: flex;
+  justify-content: center;
+  padding-top: 40px;
+}
+
+.input-pass {
+  width: 80%;
+}
+
+.reg-h1 {
+  color: rgb(207, 199, 199);
+  padding-top: 200px;
+}
+
+.fgPass-h1 {
+  padding-top: 5px;
+  color: rgb(175, 80, 80);
+  font-size: 70px;
+}
+
+.formName {
+  color: white;
+}
+
+.img-div {
+  padding-top: 60px;
+}
+
+.img-div-2 {
+  padding-top: 40px;
+}

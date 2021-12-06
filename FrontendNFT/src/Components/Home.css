@@ -1,0 +1,18 @@
+.form-tg {
+  padding: 30px;
+  background-color: white;
+}
+
+.row-div {
+  padding: 10px;
+}
+
+.labl {
+  font-size: 22px;
+}
+
+.main-card {
+  border: solid black 1px;
+  background-color: #7393b3 !important;
+  border-radius: 25px;
+}
