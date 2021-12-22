@@ -29,6 +29,11 @@ const Home = () => {
   const handleCloseTransferModal = () => setShowTransferModal(false);
   const handleShowTransferModal = () => setShowTransferModal(true);
 
+  //for but modal
+  const [showBuy, setShowBuy] = useState(false);
+  const handleCloseBuy = () => setShowBuy(false);
+  const handleShowBuy = () => setShowBuy(true);
+
   const [details, setDetails] = useState({
     value: "",
     url: "",
@@ -160,6 +165,41 @@ const Home = () => {
       });
   };
 
+  const buyToken = () => {
+    setLoading(true);
+
+    setTimeout(() => {
+      setLoading(false);
+    }, 3000);
+
+    // let payload = {
+    //   addressFrom: userDetailsRedux.Address,
+    //   userPrivateKey: userDetailsRedux.privateKey,
+    //   addressTo,
+    //   tokenID: tokenidToSend,
+    //    };
+    // console.log("Transfer Function called", payload);
+
+    // axios
+    //   .post("http://localhost:8080/api/token/transferToken", payload)
+    //   .then((res) => {
+    //     // console.log("ress", res);
+    //     toast.info("Token Transferred Successfully");
+    //     setLoading(false);
+    //     // console.log("Submiting form with values", details);
+    //     setFlag(!flag);
+    //     clearState();
+    //     setTimeout(() => {
+    //       handleCloseTransferModal();
+    //     }, 2000);
+    //   })
+    //   .catch((err) => {
+    //     // console.log("err", err.response.data);
+    //     setLoading(false);
+    //     toast.error(err.response.data);
+    //   });
+  };
+
   return (
     <div>
       <div className="text-center">
@@ -255,6 +295,30 @@ const Home = () => {
         </Modal.Footer>
       </Modal>
 
+      <>
+        <Modal
+          show={showBuy}
+          onHide={handleCloseBuy}
+          backdrop="static"
+          keyboard={false}
+        >
+          <Modal.Header closeButton>
+            <Modal.Title>Buy NFT</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            Are you sure you want to buy the NFT and pay the ETH for it ?
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={handleCloseBuy}>
+              No
+            </Button>
+            <Button variant="primary" onClick={buyToken}>
+              Yes{" "}
+            </Button>
+          </Modal.Footer>
+        </Modal>
+      </>
+
       <div className="row ">
         {tokens.length > 0 ? (
           tokens.map((tokn, i) => (
@@ -283,7 +347,11 @@ const Home = () => {
 
                   <div className="row">
                     <div className="col">
-                      <Button variant="danger" style={{ width: "100%" }}>
+                      <Button
+                        variant="danger"
+                        style={{ width: "100%" }}
+                        onClick={handleShowBuy}
+                      >
                         Buy
                       </Button>
                     </div>

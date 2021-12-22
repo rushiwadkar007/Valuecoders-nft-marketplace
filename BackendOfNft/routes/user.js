@@ -227,7 +227,7 @@ router.put("/updateDetails", async (req, res) => {
   const userName = req.body.userName;
   const email = req.body.email;
 
-  console.log("Edit User Deailscalled", userName, email);
+  console.log("Edit User Detailscalled", userName, email);
 
   try {
     User.updateOne(

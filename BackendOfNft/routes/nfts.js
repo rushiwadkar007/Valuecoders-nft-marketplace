@@ -1,5 +1,6 @@
 const router = require("express").Router();
 const Nft = require("../model/nfts");
+const User = require("../model/User");
 const TokenImageModel = require("../model/TokenImage");
 const Web3 = require("web3");
 
@@ -22,7 +23,9 @@ const privateKey = Buffer.from(
   "hex"
 );
 const owner = "0x63d8132f7862BA47832DB44EeABaf206d1D6CDD5";
-const contractAddress = "0xb3538BfD46C0E3837a1230a2833f79313e673B6b";
+// const contractAddress = "0xb3538BfD46C0E3837a1230a2833f79313e673B6b"; //without buy .
+
+const contractAddress = "0xa21479aD8a5fE7d858E4577c7557fD279Da09089";
 
 const contractABI = [
   {
@@ -329,6 +332,28 @@ const contractABI = [
     type: "function",
   },
   {
+    constant: false,
+    inputs: [
+      {
+        name: "seller",
+        type: "address",
+      },
+      {
+        name: "buyer",
+        type: "address",
+      },
+      {
+        name: "tokenid",
+        type: "uint256",
+      },
+    ],
+    name: "buyToken",
+    outputs: [],
+    payable: true,
+    stateMutability: "payable",
+    type: "function",
+  },
+  {
     constant: true,
     inputs: [
       {
@@ -496,6 +521,7 @@ const contractABI = [
     type: "event",
   },
 ];
+
 const contract = new web3.eth.Contract(contractABI, contractAddress);
 
 router.post("/mintToken", async (req, res) => {
@@ -588,6 +614,154 @@ router.post("/mintToken", async (req, res) => {
     });
 });
 
+//process -> send ether and then call the transfer function
+router.post("/purchaseToken", async (req, res) => {
+  console.log("Send Transfer called");
+  const sellerAddress = req.body.sellerAddress;
+  const buyerAddresss = req.body.buyerAddresss;
+  const amount = req.body.amount;
+  const tokenID = req.body.tokenID;
+  // const privKey = req.body.privateKey; //buyers key as he is the one sending ether.
+
+  console.log("User found is", buyerAddresss);
+  const user = await User.findOne({ Address: buyerAddresss });
+  if (!user) return res.status(400).send("Buyer Address Doesn't Exists");
+
+  console.log("User found is", user);
+
+  // const userPrivKeyBuffered = Buffer.from(user.privateKey, "hex");
+  const privKey = user.privateKey;
+
+  try {
+    const createTransaction = await web3.eth.accounts.signTransaction(
+      {
+        from: buyerAddresss,
+        to: sellerAddress,
+        value: web3.utils.toWei(amount, "ether"),
+        gas: "3000000",
+      },
+      privKey
+    );
+    // Deploy transaction
+    const createReceipt = await web3.eth.sendSignedTransaction(
+      createTransaction.rawTransaction
+    );
+
+    console.log(
+      `Transaction successful with hash: ${createReceipt.transactionHash}`
+    );
+
+    //if sending ether is successfull
+    if (createReceipt.transactionHash) {
+      const userPrivKeyBuffered = Buffer.from(privKey, "hex");
+
+      let nonce = await web3.eth.getTransactionCount(sellerAddress); //nonce is one time number , keep the owner same here
+      // console.log("nonce", nonce);
+      const NetworkId = await web3.eth.net.getId();
+      // console.log("network ID", NetworkId);
+
+      const transferFunction = contract.methods
+        .transferFrom(buyerAddresss, sellerAddress, tokenID)
+        .encodeABI();
+
+      const rawTx = {
+        from: sellerAddress, // add user address here which comes from frontend and check msg.sender from contract , userAddress didnt work
+        to: contractAddress,
+        data: transferFunction,
+        nonce: nonce,
+        value: "0x00000000000000",
+        gasLimit: web3.utils.toHex(300000),
+        gasPrice: web3.utils.toHex(100000),
+        chainId: NetworkId,
+      };
+      // console.log(transferFunction);
+
+      let trans = new transaction(rawTx, {
+        chain: "rinkeby",
+        hardfork: "petersburg",
+      });
+
+      trans.sign(userPrivKeyBuffered);
+      // console.log("trans************");
+
+      web3.eth
+        .sendSignedTransaction("0x" + trans.serialize().toString("hex"))
+        .on("receipt", async (data) => {
+          //update in DB
+          console.log("Reciept for transfer", data);
+          Nft.updateOne(
+            { tokenId: tokenID },
+            {
+              $set: {
+                owner: addressTo,
+              },
+            }
+          )
+            .then((result) => res.send("Token Transferred Successfully"))
+            .catch((err) => res.status(400).send(err));
+        })
+        .on("error", async (data) => {
+          console.log("errrrrr in transfer", data.message);
+          res.status(400).send(data.message);
+        });
+    }
+  } catch (err) {
+    // console.log("Error in Transfer", err.message);
+    res.status(400).send(err.message);
+  }
+});
+
+//getting an error -> Returned error: insufficient funds for gas * price + value
+router.post("/buyToken", async (req, res) => {
+  console.log("buy Token called");
+  const { sellerAddress, buyerAddresss, tokenID, price } = req.body;
+
+  const user = await User.findOne({ Address: sellerAddress });
+  if (!user) return res.status(400).send("Seller Address Doesn't Exists");
+
+  // console.log("User found is", user.privateKey);
+
+  const userPrivKeyBuffered = Buffer.from(user.privateKey, "hex");
+
+  let nonce = await web3.eth.getTransactionCount(sellerAddress); //nonce is one time number , keep the owner same here
+  const NetworkId = await web3.eth.net.getId();
+  // console.log("network ID", NetworkId);
+
+  const transferFunction = contract.methods
+    .buyToken(sellerAddress, buyerAddresss, tokenID)
+    .encodeABI();
+  // console.log("fncn", transferFunction);
+
+  const rawTx = {
+    from: sellerAddress,
+    to: contractAddress,
+    data: transferFunction,
+    nonce: nonce,
+    // value: "0x00000000000000",
+    value: web3.utils.toWei(price, "ether"),
+    gasLimit: web3.utils.toHex(100000),
+    gasPrice: web3.utils.toHex(20000000000),
+    chainId: NetworkId,
+  };
+
+  let trans = new transaction(rawTx, {
+    chain: "rinkeby",
+    hardfork: "petersburg",
+  });
+
+  trans.sign(userPrivKeyBuffered);
+
+  web3.eth
+    .sendSignedTransaction("0x" + trans.serialize().toString("hex"))
+    .on("receipt", async (data) => {
+      console.log("Reciept", data);
+    })
+    .on("error", async (data) => {
+      console.log("errrrrr", data.message);
+      res.status(400).send(data.message);
+    });
+});
+
 router.get("/getDetails", async (req, res) => {
   let contract = new web3.eth.Contract(contractABI, contractAddress);
   var details = await contract.methods.getTokenDetails().call();
@@ -597,7 +771,7 @@ router.get("/getDetails", async (req, res) => {
 
 router.post("/getOwnerOf", async (req, res) => {
   const { tokenID } = req.body;
-  console.log("Token ID", tokenID);
+  console.log("Token ID in getOwnerOf", tokenID);
   let contract = new web3.eth.Contract(contractABI, contractAddress);
   var details = await contract.methods.ownerOf(tokenID).call();
   console.log("Details", details);
