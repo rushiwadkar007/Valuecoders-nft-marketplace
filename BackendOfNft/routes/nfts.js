@@ -15,7 +15,7 @@ const web3 = new Web3(
   )
 );
 
-// const ETx = require("ethereumjs-tx");
+const ETx = require("ethereumjs-tx");
 const transaction = require("ethereumjs-tx");
 
 const privateKey = Buffer.from(
@@ -556,8 +556,12 @@ router.post("/mintToken", async (req, res) => {
     data: transferFunction,
     nonce: nonce,
     value: "0x00000000000000",
-    gasLimit: web3.utils.toHex(300000),
-    gasPrice: web3.utils.toHex(100000000000),
+    // gasLimit: web3.utils.toHex(300000),
+    // gasPrice: web3.utils.toHex(100000000000),
+    gas: web3.utils.toHex(1500000),
+    gasPrice: web3.utils.toHex(30000000000),
+    // gasPrice: web3.utils.toHex(2000000),
+    // gasLimit: web3.utils.toHex(210000),
     chainId: NetworkId,
   };
   // console.log(transferFunction);
@@ -739,8 +743,10 @@ router.post("/buyToken", async (req, res) => {
     nonce: nonce,
     // value: "0x00000000000000",
     value: web3.utils.toWei(price, "ether"),
-    gasLimit: web3.utils.toHex(100000),
-    gasPrice: web3.utils.toHex(20000000000),
+    // gasLimit: web3.utils.toHex(100000),
+    // gasPrice: web3.utils.toHex(20000000000),
+    gasPrice: web3.utils.toHex(2000000),
+    gasLimit: web3.utils.toHex(210000),
     chainId: NetworkId,
   };
 
@@ -774,6 +780,13 @@ router.post("/getOwnerOf", async (req, res) => {
   console.log("Token ID in getOwnerOf", tokenID);
   let contract = new web3.eth.Contract(contractABI, contractAddress);
   var details = await contract.methods.ownerOf(tokenID).call();
+  console.log("Details", details);
+  res.send(details);
+});
+
+router.get("/totalSupply", async (req, res) => {
+  let contract = new web3.eth.Contract(contractABI, contractAddress);
+  var details = await contract.methods.totalSupply().call();
   console.log("Details", details);
   res.send(details);
 });
@@ -846,6 +859,123 @@ router.post("/transferToken", async (req, res) => {
     })
     .on("error", async (data) => {
       console.log("errrrrr in transfer", data.message);
+      res.status(400).send(data.message);
+    });
+});
+
+//sir's method
+router.post("/mintTokens", async (req, res) => {
+  const { url, value, userAddress, userPrivateKey } = req.body;
+
+  // console.log("Mint called", userAddress, userPrivateKey);
+
+  const userPrivKeyBuffered = Buffer.from(userPrivateKey, "hex");
+
+  //saving image and passing its _id as the url in contract
+  const tokenImageObj = new TokenImageModel({
+    url: url,
+  });
+
+  const savedImage = await tokenImageObj.save();
+  // console.log("Saved Image ", savedImage);
+  // console.log("IMAGEEEEEEEEEEEEEEEEEEEE", JSON.stringify(savedImage._id));
+
+  const idForImage = JSON.stringify(savedImage._id);
+
+  // let nonce = await web3.eth.getTransactionCount(userAddress); //nonce is one time number , keep the owner same here
+  // console.log("nonce", nonce);
+  // const NetworkId = await web3.eth.net.getId();
+  // console.log("network ID", NetworkId);
+
+  // const transferFunction = contract.methods.mint(idForImage, value).encodeABI();
+  // console.log("fncn", transferFunction);
+
+  // const rawTx = {
+  //   from: userAddress, // add user address here which comes from frontend and check msg.sender from contract , userAddress didnt work
+  //   to: contractAddress,
+  //   data: transferFunction,
+  //   nonce: nonce,
+  //   value: "0x00000000000000",
+  //   gasLimit: web3.utils.toHex(300000),
+  //   gasPrice: web3.utils.toHex(100000000000),
+  //   // gasPrice: web3.utils.toHex(2000000),
+  //   // gasLimit: web3.utils.toHex(210000),
+  //   chainId: NetworkId,
+  // };
+  // console.log(transferFunction);
+
+  // let trans = new transaction(rawTx, {
+  //   chain: "rinkeby",
+  //   hardfork: "petersburg",
+  // });
+
+  // trans.sign(userPrivKeyBuffered);
+  // console.log("trans************");
+
+  let Nonce = await web3.eth.getTransactionCount(userAddress);
+  console.log("Nonce: " + Nonce);
+  let Data = contract.methods.mint(idForImage, value).encodeABI();
+
+  console.log("Data", Data);
+
+  const NetworkID = await web3.eth.net.getId();
+
+  const rawTx = {
+    nonce: Nonce,
+    gasPrice: web3.utils.toHex(2000000),
+    gasLimit: web3.utils.toHex(210000),
+    from: userAddress,
+    to: contractAddress,
+    data: Data,
+    value: "0x0",
+    chainID: NetworkID,
+  };
+
+  let Tx = new ETx(rawTx, { chain: "rinkeby", hardfork: "petersburg" });
+  console.log("TX", Tx);
+
+  Tx.sign(userPrivKeyBuffered);
+
+  web3.eth
+    .sendSignedTransaction("0x" + Tx.serialize().toString("hex"))
+    .on("receipt", async (data) => {
+      console.log("Reciept", data);
+
+      //getting created token and storing in db after successfull transaction
+      var details = await contract.methods.getTokenDetails().call();
+
+      // console.log("address", details["0"]);
+      // console.log("token id", details["1"]);
+      // console.log("Value ", details["2"]);
+      // console.log("Name", JSON.parse(details["3"])); //url
+
+      const nft = new Nft({
+        url: JSON.parse(details["3"]),
+        owner: details["0"],
+        tokenId: details["1"],
+        value: details["2"],
+      });
+
+      nft
+        .save()
+        .then((result) => {
+          // console.log(result);
+          res.send("Token Minted Successfully ");
+        })
+        .catch((err) => {
+          // console.log(err);
+          res.status(400).send(err);
+        });
+    })
+    .on("error", async (data) => {
+      // res.send(data) ;
+      //delete the uploaded image from db .
+
+      TokenImageModel.deleteOne({ _id: savedImage._id })
+        .then((result) => console.log("Image Deleted ", result))
+        .catch((err) => console.log("Error while deleting Image", err));
+
+      console.log("errrrrr", data.message);
       res.status(400).send(data.message);
     });
 });

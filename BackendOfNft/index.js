@@ -18,7 +18,7 @@ const nftRoute = require("./routes/nfts");
 //connnect to DB
 
 mongoose
-  .connect(process.env.mongoURILocal, {
+  .connect(process.env.DB_CONNECT, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
     // useCreateIndex: true, // not supported

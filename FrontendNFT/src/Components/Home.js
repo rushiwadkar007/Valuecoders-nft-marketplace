@@ -340,7 +340,7 @@ const Home = () => {
                   </Card.Title>
                   <Card.Title
                     style={{ padding: "5px" }}
-                  >{`Value : ${tokn.value}`}</Card.Title>
+                  >{`Value : ${tokn.value}  ETH`}</Card.Title>
                   <Card.Title
                     style={{ padding: "5px" }}
                   >{`Owner : ${tokn.owner}`}</Card.Title>
