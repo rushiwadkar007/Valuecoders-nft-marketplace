@@ -246,4 +246,14 @@ router.put("/updateDetails", async (req, res) => {
   }
 });
 
+router.post("/getETHBalance", async (req, res) => {
+  const { userAddress } = req.body;
+  console.log("get ETH Balance called....", userAddress);
+  const balance = web3.utils.fromWei(
+    await web3.eth.getBalance(userAddress),
+    "ether"
+  );
+  res.send(balance);
+});
+
 module.exports = router;

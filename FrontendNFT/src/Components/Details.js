@@ -18,7 +18,22 @@ import { useSelector } from "react-redux";
 toast.configure();
 
 const Details = (props) => {
+  const [ethBalance, setEthBalance] = useState();
   const userDetails = useSelector((state) => state.user.userDetails);
+
+  useEffect(() => {
+    const payload = {
+      userAddress: userDetails.Address,
+    };
+
+    axios
+      .post("http://localhost:8080/api/user/getETHBalance", payload)
+      .then((res) => {
+        console.log(res);
+        setEthBalance(res.data);
+      })
+      .catch((err) => console.log(err));
+  });
 
   return (
     <div>
@@ -44,7 +59,7 @@ const Details = (props) => {
                   <Card.Body>
                     <Card.Title>User Details</Card.Title>
                     <Card.Text>{`Name : ${userDetails?.name}`}</Card.Text>
-                    <Card.Text>{`Email ID :${userDetails?.email}`}</Card.Text>
+                    <Card.Text>{`Email ID : ${userDetails?.email}`}</Card.Text>
                   </Card.Body>
                 </Card>
               </div>
@@ -76,6 +91,9 @@ const Details = (props) => {
                         </svg>
                       </CopyToClipboard>
                     </Card.Text>
+                    <Card.Text>{`Eth Balance : ${
+                      ethBalance ? ethBalance : "-"
+                    }`}</Card.Text>
                   </Card.Body>
                 </Card>
               </div>
