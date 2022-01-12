@@ -2,12 +2,18 @@ const router = require("express").Router();
 const Nft = require("../model/nfts");
 const User = require("../model/User");
 const TokenImageModel = require("../model/TokenImage");
+const BidNFT = require("../model/bidNFT.js");
 const Web3 = require("web3");
-
+var express = require('express')
+var bodyParser = require('body-parser')
+var app = express()
+const nftContractABI = require("../contract_details/NFT.json");
 //latest url new project
 // const web3 = new Web3(
 //   "https://rinkeby.infura.io/v3/b22f85c0dfe34bc88c60e3f132dbe4a4"
 // );
+var jsonParser = bodyParser.json();
+var urlencodedParser = bodyParser.urlencoded({ extended: false })
 
 const web3 = new Web3(
   new Web3.providers.HttpProvider(
@@ -19,514 +25,22 @@ const ETx = require("ethereumjs-tx");
 const transaction = require("ethereumjs-tx");
 
 const privateKey = Buffer.from(
-  "13c9c83602dbf416fb8c2ceadb2420aaf4e0e42547ec093f0059429f95a2ac09",
+  process.env.PRIVATE_KEY,
   "hex"
 );
-const owner = "0x63d8132f7862BA47832DB44EeABaf206d1D6CDD5";
+const owner = process.env.OWNER;
 // const contractAddress = "0xb3538BfD46C0E3837a1230a2833f79313e673B6b"; //without buy .
 
-const contractAddress = "0xa21479aD8a5fE7d858E4577c7557fD279Da09089";
+const contractAddress = nftContractABI.networks[3].address;
 
-const contractABI = [
-  {
-    constant: true,
-    inputs: [
-      {
-        name: "interfaceId",
-        type: "bytes4",
-      },
-    ],
-    name: "supportsInterface",
-    outputs: [
-      {
-        name: "",
-        type: "bool",
-      },
-    ],
-    payable: false,
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    constant: false,
-    inputs: [
-      {
-        name: "_color",
-        type: "string",
-      },
-      {
-        name: "_value",
-        type: "uint256",
-      },
-    ],
-    name: "mint",
-    outputs: [],
-    payable: false,
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    constant: true,
-    inputs: [],
-    name: "name",
-    outputs: [
-      {
-        name: "",
-        type: "string",
-      },
-    ],
-    payable: false,
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    constant: true,
-    inputs: [
-      {
-        name: "tokenId",
-        type: "uint256",
-      },
-    ],
-    name: "getApproved",
-    outputs: [
-      {
-        name: "",
-        type: "address",
-      },
-    ],
-    payable: false,
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    constant: false,
-    inputs: [
-      {
-        name: "to",
-        type: "address",
-      },
-      {
-        name: "tokenId",
-        type: "uint256",
-      },
-    ],
-    name: "approve",
-    outputs: [],
-    payable: false,
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    constant: true,
-    inputs: [],
-    name: "totalSupply",
-    outputs: [
-      {
-        name: "",
-        type: "uint256",
-      },
-    ],
-    payable: false,
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    constant: false,
-    inputs: [
-      {
-        name: "from",
-        type: "address",
-      },
-      {
-        name: "to",
-        type: "address",
-      },
-      {
-        name: "tokenId",
-        type: "uint256",
-      },
-    ],
-    name: "transferFrom",
-    outputs: [],
-    payable: false,
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    constant: true,
-    inputs: [
-      {
-        name: "owner",
-        type: "address",
-      },
-      {
-        name: "index",
-        type: "uint256",
-      },
-    ],
-    name: "tokenOfOwnerByIndex",
-    outputs: [
-      {
-        name: "",
-        type: "uint256",
-      },
-    ],
-    payable: false,
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    constant: false,
-    inputs: [
-      {
-        name: "from",
-        type: "address",
-      },
-      {
-        name: "to",
-        type: "address",
-      },
-      {
-        name: "tokenId",
-        type: "uint256",
-      },
-    ],
-    name: "safeTransferFrom",
-    outputs: [],
-    payable: false,
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    constant: true,
-    inputs: [
-      {
-        name: "index",
-        type: "uint256",
-      },
-    ],
-    name: "tokenByIndex",
-    outputs: [
-      {
-        name: "",
-        type: "uint256",
-      },
-    ],
-    payable: false,
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    constant: true,
-    inputs: [
-      {
-        name: "tokenId",
-        type: "uint256",
-      },
-    ],
-    name: "ownerOf",
-    outputs: [
-      {
-        name: "",
-        type: "address",
-      },
-    ],
-    payable: false,
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    constant: true,
-    inputs: [
-      {
-        name: "owner",
-        type: "address",
-      },
-    ],
-    name: "balanceOf",
-    outputs: [
-      {
-        name: "",
-        type: "uint256",
-      },
-    ],
-    payable: false,
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    constant: true,
-    inputs: [],
-    name: "symbol",
-    outputs: [
-      {
-        name: "",
-        type: "string",
-      },
-    ],
-    payable: false,
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    constant: false,
-    inputs: [
-      {
-        name: "to",
-        type: "address",
-      },
-      {
-        name: "approved",
-        type: "bool",
-      },
-    ],
-    name: "setApprovalForAll",
-    outputs: [],
-    payable: false,
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    constant: false,
-    inputs: [
-      {
-        name: "from",
-        type: "address",
-      },
-      {
-        name: "to",
-        type: "address",
-      },
-      {
-        name: "tokenId",
-        type: "uint256",
-      },
-      {
-        name: "_data",
-        type: "bytes",
-      },
-    ],
-    name: "safeTransferFrom",
-    outputs: [],
-    payable: false,
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    constant: true,
-    inputs: [
-      {
-        name: "",
-        type: "uint256",
-      },
-    ],
-    name: "colors",
-    outputs: [
-      {
-        name: "",
-        type: "string",
-      },
-    ],
-    payable: false,
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    constant: false,
-    inputs: [
-      {
-        name: "seller",
-        type: "address",
-      },
-      {
-        name: "buyer",
-        type: "address",
-      },
-      {
-        name: "tokenid",
-        type: "uint256",
-      },
-    ],
-    name: "buyToken",
-    outputs: [],
-    payable: true,
-    stateMutability: "payable",
-    type: "function",
-  },
-  {
-    constant: true,
-    inputs: [
-      {
-        name: "tokenId",
-        type: "uint256",
-      },
-    ],
-    name: "tokenURI",
-    outputs: [
-      {
-        name: "",
-        type: "string",
-      },
-    ],
-    payable: false,
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    constant: true,
-    inputs: [
-      {
-        name: "owner",
-        type: "address",
-      },
-      {
-        name: "operator",
-        type: "address",
-      },
-    ],
-    name: "isApprovedForAll",
-    outputs: [
-      {
-        name: "",
-        type: "bool",
-      },
-    ],
-    payable: false,
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    constant: true,
-    inputs: [],
-    name: "getTokenDetails",
-    outputs: [
-      {
-        name: "",
-        type: "address",
-      },
-      {
-        name: "",
-        type: "uint256",
-      },
-      {
-        name: "",
-        type: "uint256",
-      },
-      {
-        name: "",
-        type: "string",
-      },
-    ],
-    payable: false,
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    payable: false,
-    stateMutability: "nonpayable",
-    type: "constructor",
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: false,
-        name: "",
-        type: "address",
-      },
-      {
-        indexed: false,
-        name: "",
-        type: "uint256",
-      },
-      {
-        indexed: false,
-        name: "",
-        type: "uint256",
-      },
-      {
-        indexed: false,
-        name: "",
-        type: "string",
-      },
-    ],
-    name: "Details",
-    type: "event",
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: true,
-        name: "from",
-        type: "address",
-      },
-      {
-        indexed: true,
-        name: "to",
-        type: "address",
-      },
-      {
-        indexed: true,
-        name: "tokenId",
-        type: "uint256",
-      },
-    ],
-    name: "Transfer",
-    type: "event",
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: true,
-        name: "owner",
-        type: "address",
-      },
-      {
-        indexed: true,
-        name: "approved",
-        type: "address",
-      },
-      {
-        indexed: true,
-        name: "tokenId",
-        type: "uint256",
-      },
-    ],
-    name: "Approval",
-    type: "event",
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: true,
-        name: "owner",
-        type: "address",
-      },
-      {
-        indexed: true,
-        name: "operator",
-        type: "address",
-      },
-      {
-        indexed: false,
-        name: "approved",
-        type: "bool",
-      },
-    ],
-    name: "ApprovalForAll",
-    type: "event",
-  },
-];
+const contractABI = nftContractABI.abi;
 
 const contract = new web3.eth.Contract(contractABI, contractAddress);
 
 router.post("/mintToken", async (req, res) => {
   const { url, value, userAddress, userPrivateKey } = req.body;
-
+  console.log("value of the NFT ", value);
+  const ownerName = "Rushikesh";
   // console.log("Mint called", userAddress, userPrivateKey);
 
   const userPrivKeyBuffered = Buffer.from(userPrivateKey, "hex");
@@ -547,23 +61,29 @@ router.post("/mintToken", async (req, res) => {
   const NetworkId = await web3.eth.net.getId();
   // console.log("network ID", NetworkId);
 
-  const transferFunction = contract.methods.mint(idForImage, value).encodeABI();
+  const transferFunction = contract.methods.mint(idForImage, value, ownerName).encodeABI();
+  let balanceOfAccount = web3.eth.getBalance(userAddress)
+    .then(console.log);
   // console.log("fncn", transferFunction);
-
   const rawTx = {
     from: userAddress, // add user address here which comes from frontend and check msg.sender from contract , userAddress didnt work
     to: contractAddress,
+    contractAddress: contractAddress,
     data: transferFunction,
-    nonce: nonce,
-    value: "0x00000000000000",
-    // gasLimit: web3.utils.toHex(300000),
-    // gasPrice: web3.utils.toHex(100000000000),
+    nonce: "0x" + nonce.toString(16),
+    value: 0x00000000000000,
     gas: web3.utils.toHex(1500000),
     gasPrice: web3.utils.toHex(30000000000),
-    // gasPrice: web3.utils.toHex(2000000),
-    // gasLimit: web3.utils.toHex(210000),
     chainId: NetworkId,
+    // web3.utils.toWei(web3.utils.toBN(1), 'ether')
+    // web3.utils.toWei('100', 'wei')
+    // gasLimit: web3.utils.toHex(300000),
+    // gasPrice: web3.utils.toHex(100000000000),
   };
+
+  // gas: web3.utils.toHex('65000'),
+  // gasPrice: web3.utils.toHex('20000000000'),
+  console.log('rawTx', rawTx);
   // console.log(transferFunction);
 
   let trans = new transaction(rawTx, {
@@ -571,13 +91,15 @@ router.post("/mintToken", async (req, res) => {
     hardfork: "petersburg",
   });
 
+  console.log('trans ', trans);
+
   trans.sign(userPrivKeyBuffered);
   // console.log("trans************");
-
+  console.log('sign trans is done........');
   web3.eth
     .sendSignedTransaction("0x" + trans.serialize().toString("hex"))
     .on("receipt", async (data) => {
-      console.log("Reciept", data);
+      console.log("Reciept", data.contractAddress);
 
       //getting created token and storing in db after successfull transaction
       var details = await contract.methods.getTokenDetails().call();
@@ -619,15 +141,16 @@ router.post("/mintToken", async (req, res) => {
 });
 
 //process -> send ether and then call the transfer function
-router.post("/purchaseToken", async (req, res) => {
+router.post("/purchaseToken", urlencodedParser, async (req, res) => {
   console.log("Send Transfer called");
   const sellerAddress = req.body.sellerAddress;
   const buyerAddresss = req.body.buyerAddresss;
   const amount = req.body.amount;
   const tokenID = req.body.tokenID;
   // const privKey = req.body.privateKey; //buyers key as he is the one sending ether.
-
+  console.log("Seller found is", sellerAddress);
   console.log("User found is", buyerAddresss);
+  console.log(req.body.amount);
   const user = await User.findOne({ Address: buyerAddresss });
   if (!user) return res.status(400).send("Buyer Address Doesn't Exists");
 
@@ -674,11 +197,13 @@ router.post("/purchaseToken", async (req, res) => {
         data: transferFunction,
         nonce: nonce,
         value: "0x00000000000000",
-        gasLimit: web3.utils.toHex(300000),
-        gasPrice: web3.utils.toHex(100000),
+        gas: web3.utils.toHex(1500000),
+        gasPrice: web3.utils.toHex(30000000000),
         chainId: NetworkId,
       };
       // console.log(transferFunction);
+      // gasLimit: web3.utils.toHex(300000),
+      // gasPrice: web3.utils.toHex(100000),
 
       let trans = new transaction(rawTx, {
         chain: "rinkeby",
@@ -715,11 +240,89 @@ router.post("/purchaseToken", async (req, res) => {
   }
 });
 
-//getting an error -> Returned error: insufficient funds for gas * price + value
-router.post("/buyToken", async (req, res) => {
-  console.log("buy Token called");
-  const { sellerAddress, buyerAddresss, tokenID, price } = req.body;
+//process -> send ether and then call the transfer function
+router.post("/setAuctionTime", urlencodedParser, async (req, res) => {
+  console.log("Send setTimeAuction called");
+  // const sellerAddress = req.body.sellerAddress;
+  // const buyerAddresss = req.body.buyerAddresss;
+  const _biddingTime = req.body._biddingTime;
+  const tokenID = req.body.tokenID;
+  const tokenOwner = req.body.tokenOwner;
+  // const privKey = req.body.privateKey; //buyers key as he is the one sending ether.
+  console.log("bidding time is", _biddingTime);
+  console.log("token ID ", tokenID);
+  console.log("TOken owner", tokenOwner);
+  const bidNFT = new BidNFT({ _biddingTime: _biddingTime, tokenID: tokenID, bidder: tokenOwner });
+  const saveTimeAndTokenID = await bidNFT.save();
 
+  const user = await Nft.findOne({ owner: tokenOwner });
+  console.log(user);
+  if (!user) return res.status(400).send(user.owner);
+
+  // const userPrivKeyBuffered = Buffer.from(user.privateKey, "hex");
+  const userPrivKeyBuffered = Buffer.from(process.env.PRIVATE_KEY, "hex");
+  // console.log(privKey);
+  let nonce = await web3.eth.getTransactionCount(tokenOwner); //nonce is one time number , keep the owner same here
+  const NetworkId = await web3.eth.net.getId();
+  // console.log("network ID", NetworkId);
+  console.log("nonce", nonce);
+  const transferFunction = contract.methods
+    .setAuctionPeriod(_biddingTime, tokenID)
+    .encodeABI()
+  // console.log("fncn", transferFunction);
+
+  const rawTx = {
+    from: tokenOwner, // add user address here which comes from frontend and check msg.sender from contract , userAddress didnt work
+    to: contractAddress,
+    data: transferFunction,
+    nonce: nonce,
+    value: "0x00000000000000",
+    gas: web3.utils.toHex(1500000),
+    gasPrice: web3.utils.toHex(30000000000),
+    chainId: NetworkId,
+    // from: web3.utils.toChecksumAddress(buyerAddresss),
+    // to: contractAddress,
+    // data: transferFunction,
+    // nonce: nonce + 1,
+    // // value: "0x00000000000000",
+    // value: web3.utils.toWei(web3.utils.toBN(price), "ether"),
+    // // gasLimit: web3.utils.toHex(100000),
+    // // gasPrice: web3.utils.toHex(20000000000),
+    // gas: web3.utils.toHex(1500000),
+    // gasPrice: web3.utils.toHex(30000000000) * 1.40,
+    // chainId: NetworkId,
+  };
+
+  // console.log(web3.eth.getBlock('latest').then((data) => { console.log(data) }));
+
+  // console.log(rawTx);
+
+  let trans = new transaction(rawTx, {
+    chain: "rinkeby",
+    hardfork: "petersburg",
+  });
+  // console.log(trans)
+
+  trans.sign(userPrivKeyBuffered);
+
+
+  web3.eth
+    .sendSignedTransaction("0x" + trans.serialize().toString("hex")).on("receipt", async (data) => {
+      // web3.eth.getPendingTransactions().then(console.log);
+      console.log("Reciept", data);
+    })
+    .on("error", async (data) => {
+      console.log("errrrrr", data.message);
+      res.status(400).send(data.message);
+    });
+
+});
+
+//getting an error -> Returned error: insufficient funds for gas * price + value
+router.post("/buyToken", urlencodedParser, async (req, res) => {
+  console.log("buy Token called");
+  const { sellerAddress, buyerAddresss, price, tokenID } = req.body;
+  console.log("sellerAddress", sellerAddress);
   const user = await User.findOne({ Address: sellerAddress });
   if (!user) return res.status(400).send("Seller Address Doesn't Exists");
 
@@ -730,36 +333,50 @@ router.post("/buyToken", async (req, res) => {
   let nonce = await web3.eth.getTransactionCount(sellerAddress); //nonce is one time number , keep the owner same here
   const NetworkId = await web3.eth.net.getId();
   // console.log("network ID", NetworkId);
-
+  console.log("nonce", nonce);
   const transferFunction = contract.methods
     .buyToken(sellerAddress, buyerAddresss, tokenID)
-    .encodeABI();
+    .encodeABI()
   // console.log("fncn", transferFunction);
 
   const rawTx = {
-    from: sellerAddress,
+    from: sellerAddress, // add user address here which comes from frontend and check msg.sender from contract , userAddress didnt work
     to: contractAddress,
     data: transferFunction,
     nonce: nonce,
-    // value: "0x00000000000000",
-    value: web3.utils.toWei(price, "ether"),
-    // gasLimit: web3.utils.toHex(100000),
-    // gasPrice: web3.utils.toHex(20000000000),
-    gasPrice: web3.utils.toHex(2000000),
-    gasLimit: web3.utils.toHex(210000),
+    value: "0x00000000000000",
+    gas: web3.utils.toHex(1500000),
+    gasPrice: web3.utils.toHex(30000000000),
     chainId: NetworkId,
+    // from: web3.utils.toChecksumAddress(buyerAddresss),
+    // to: contractAddress,
+    // data: transferFunction,
+    // nonce: nonce + 1,
+    // // value: "0x00000000000000",
+    // value: web3.utils.toWei(web3.utils.toBN(price), "ether"),
+    // // gasLimit: web3.utils.toHex(100000),
+    // // gasPrice: web3.utils.toHex(20000000000),
+    // gas: web3.utils.toHex(1500000),
+    // gasPrice: web3.utils.toHex(30000000000) * 1.40,
+    // chainId: NetworkId,
   };
+
+  // console.log(web3.eth.getBlock('latest').then((data) => { console.log(data.gasLimit, data.gasUsed) }));
+
+  // console.log(rawTx);
 
   let trans = new transaction(rawTx, {
     chain: "rinkeby",
     hardfork: "petersburg",
   });
+  // console.log(trans)
 
   trans.sign(userPrivKeyBuffered);
 
+
   web3.eth
-    .sendSignedTransaction("0x" + trans.serialize().toString("hex"))
-    .on("receipt", async (data) => {
+    .sendSignedTransaction("0x" + trans.serialize().toString("hex")).on("receipt", async (data) => {
+      web3.eth.getPendingTransactions().then(console.log);
       console.log("Reciept", data);
     })
     .on("error", async (data) => {

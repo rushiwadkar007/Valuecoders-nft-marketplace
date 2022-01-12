@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 
+
 const { ObjectId } = mongoose.Schema; // for category
 
 const nftSchema = new mongoose.Schema({
