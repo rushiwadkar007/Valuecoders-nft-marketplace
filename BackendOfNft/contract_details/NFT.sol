@@ -1,6 +1,7 @@
 pragma solidity 0.5.2;
 
 import "./ERC721Full.sol";
+import "../ERC20/ERC20.sol";
 
 contract Color is ERC721Full {
     struct TokenValue {
@@ -61,6 +62,8 @@ contract Color is ERC721Full {
     mapping(address => uint256) public pendingReturns;
 
     bool bidEnded = false;
+
+    bool paymetTransferred = false;
 
     event HighestBidIncrease(address bidder, uint256 amount);
 
@@ -135,19 +138,48 @@ contract Color is ERC721Full {
         return (tokn.tokenOwner, tokn.token_id, tokn.value, tokn.name);
     }
 
-    function buyToken(
-        address payable seller,
-        address payable buyer,
-        uint256 tokenid
-    ) public payable {
+    function transferPayment(address payable _from, address payable _to)
+        public
+        payable
+    {
         require(
-            msg.value != 0 && ownerOf(tokenid) != buyer,
-            "Asset value can not be zero."
+            msg.value != 0,
+            "Must send ethers to the seller. You are sending 0 amount as payment to seller."
         );
 
-        seller.transfer(msg.value);
+        require(_from != address(0) && _to != address(0), "address is Empty.");
+
+        uint256 amount = msg.value;
+
+        _from = msg.sender;
+
+        _to.call.value(amount).gas(53000)(" ");
+
+        paymetTransferred = true;
+    }
+
+    function transferNFT(
+        address seller,
+        address payable buyer,
+        uint256 tokenid
+    ) public returns (bool) {
+        require(
+            paymetTransferred == true,
+            "Payment has not yet been transferred to the NFT Owner. Please Send Payment in time."
+        );
+
+        require(
+            ownerOf(tokenid) != buyer,
+            "Buyer can not be the owner of NFT at this stage."
+        );
 
         safeTransferFrom(seller, buyer, tokenid);
+
+        beneficiary = buyer;
+
+        paymetTransferred = false;
+
+        return true;
     }
 
     function bidNFT() internal {
@@ -155,7 +187,7 @@ contract Color is ERC721Full {
 
         require(
             msg.value >= highestBid,
-            "there is higher or equal bid already present"
+            "Equal or higher than this bid is already present"
         );
 
         highestBid = msg.value;
@@ -240,6 +272,8 @@ contract Color is ERC721Full {
             nftListByNFTOwner[highestBidder][tokenID].tokenID = tokenID;
 
             nftListByNFTOwner[highestBidder][tokenID].isNFTBiddingDone = true;
+
+            beneficiary = highestBidder;
 
             return (
                 nftListByNFTOwner[highestBidder][tokenID].tokenOwner,
