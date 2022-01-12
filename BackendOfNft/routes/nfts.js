@@ -23,9 +23,13 @@ var jsonParser = bodyParser.json();
 var urlencodedParser = bodyParser.urlencoded({ extended: false })
 
 const web3 = new Web3(
+
   new Web3.providers.HttpProvider(
+
     "https://rinkeby.infura.io/v3/0480f6f61a2c48d18ca1365c7de71013"
+
   )
+
 );
 
 const ETx = require("ethereumjs-tx");
@@ -33,8 +37,11 @@ const ETx = require("ethereumjs-tx");
 const transaction = require("ethereumjs-tx");
 
 const privateKey = Buffer.from(
+
   process.env.PRIVATE_KEY,
+
   "hex"
+
 );
 
 const owner = process.env.OWNER;
@@ -46,16 +53,19 @@ const contractABI = nftContractABI.abi;
 const contract = new web3.eth.Contract(contractABI, contractAddress);
 
 router.post("/mintToken", async (req, res) => {
-  const { url, value, userAddress, userPrivateKey } = req.body;
-  console.log("value of the NFT ", value);
-  const ownerName = "Rushikesh";
 
+  const { url, value, userAddress, userPrivateKey } = req.body;
+
+  console.log("value of the NFT ", value);
+
+  const ownerName = "Rushikesh";
 
   const userPrivKeyBuffered = Buffer.from(userPrivateKey, "hex");
 
-
   const tokenImageObj = new TokenImageModel({
+
     url: url,
+
   });
 
   const savedImage = await tokenImageObj.save();
@@ -63,35 +73,53 @@ router.post("/mintToken", async (req, res) => {
   const idForImage = JSON.stringify(savedImage._id);
 
   let nonce = await web3.eth.getTransactionCount(userAddress);
+
   console.log("nonce", nonce);
+
   const NetworkId = await web3.eth.net.getId();
 
   const transferFunction = contract.methods.mint(idForImage, value, ownerName).encodeABI();
+
   let balanceOfAccount = web3.eth.getBalance(userAddress)
+
     .then(console.log);
 
   const rawTx = {
+
     from: userAddress,
+
     to: contractAddress,
+
     contractAddress: contractAddress,
+
     data: transferFunction,
+
     nonce: "0x" + nonce.toString(16),
+
     value: 0x00000000000000,
+
     gas: web3.utils.toHex(1500000),
+
     gasPrice: web3.utils.toHex(30000000000),
+
     chainId: NetworkId,
+
   };
 
   console.log('rawTx', rawTx);
 
   let trans = new transaction(rawTx, {
+
     chain: "rinkeby",
+
     hardfork: "petersburg",
+
   });
 
   console.log('trans ', trans);
 
   trans.sign(userPrivKeyBuffered);
+
   console.log('sign trans is done........');
   web3.eth
     .sendSignedTransaction("0x" + trans.serialize().toString("hex"))
@@ -276,7 +304,6 @@ router.post("/setAuctionTime", urlencodedParser, async (req, res) => {
     });
 
 });
-
 
 router.post("/buyToken", urlencodedParser, async (req, res) => {
   console.log("buy Token called");
