@@ -60,7 +60,7 @@ const contract = new web3.eth.Contract(contractABI, contractAddress);
 
 router.post("/mintToken", async (req, res) => {
 
-  const { url, value, userAddress, userPrivateKey, minterName } = req.body;
+  const { url, value, userAddress, userPrivateKey, minterName, description } = req.body;
 
   console.log("value of the NFT ", value);
 
@@ -146,6 +146,22 @@ router.post("/mintToken", async (req, res) => {
         tokenId: details["1"],
 
         value: details["2"],
+
+        title: idForImage,
+
+        ownerName: minterName,
+
+        description: description
+
+        // const payload = {
+        //   url: details.url,
+        //   value: details.value,
+        //   userAddress: userInfo.Address,
+        //   userPrivateKey: userInfo.privateKey,
+        //   name: userInfo.name,
+        //   description: details.description,
+        //   title: details.title,
+        // };
       });
 
       nft

@@ -32,6 +32,19 @@ const nftSchema = new mongoose.Schema({
     // max: 1024,
     // min: 6,
   },
+
+  title: {
+    type: String,
+    required: true
+  },
+  ownerName: {
+    type: String,
+    required: true
+  },
+  description: {
+    type: String,
+    required: true
+  }
 });
 
 module.exports = mongoose.model("Nft", nftSchema);
