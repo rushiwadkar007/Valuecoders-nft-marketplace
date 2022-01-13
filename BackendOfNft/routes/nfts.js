@@ -406,7 +406,7 @@ router.post("/setAuctionTime", urlencodedParser, async (req, res) => {
 
 });
 
-//GET AUCTION PERIOD BY TOKEN ID
+// GET AUCTION PERIOD BY TOKEN ID
 router.get("/getAuctionPeriod", async (req, res) => {
 
   const tokenID = req.query.tokenID;
@@ -763,6 +763,81 @@ router.post("/endAuction", urlencodedParser, async (req, res) => {
     alert("Token Auction is Still going on. Please wait to know the Bid Winner. However you can still place another bid to win this bid")
 
   }
+
+});
+
+// LET PARTICIPATORIES WITHDRAW THEIR FUNDS ONCE AFTER BID ENDS.
+router.post("/withdrawBidAmount", urlencodedParser, async (req, res) => {
+
+  console.log("Send setTimeAuction called");
+
+  const { participatory } = req.body;
+
+  console.log("participatory", participatory);
+
+  const user = await User.findOne({ Address: participatory.toLowerCase() });
+
+  console.log('user details', user);
+
+  if (!user) return res.status(400).send(user);
+
+  const userPrivKeyBuffered = Buffer.from(user.privateKey, "hex");
+
+  let nonce = await web3.eth.getTransactionCount(user.Address);
+
+  const NetworkId = await web3.eth.net.getId();
+
+  console.log("nonce", nonce);
+
+  const transferFunction = contract.methods
+    .withdrawFunds()
+    .encodeABI()
+
+  const rawTx = {
+
+    from: user.Address,
+
+    to: contractAddress,
+
+    data: transferFunction,
+
+    nonce: nonce,
+
+    value: "0x00000000000000",
+
+    gas: web3.utils.toHex(1500000),
+
+    gasPrice: web3.utils.toHex(30000000000),
+
+    chainId: NetworkId,
+
+  };
+
+  let trans = new transaction(rawTx, {
+
+    chain: "rinkeby",
+
+    hardfork: "petersburg",
+
+  });
+
+  trans.sign(userPrivKeyBuffered);
+
+  web3.eth
+
+    .sendSignedTransaction("0x" + trans.serialize().toString("hex")).on("receipt", async (data) => {
+
+      console.log("Reciept", data);
+
+    })
+
+    .on("error", async (data) => {
+
+      console.log("errrrrr", data.message);
+
+      res.status(400).send(data.message);
+
+    });
 
 });
 
