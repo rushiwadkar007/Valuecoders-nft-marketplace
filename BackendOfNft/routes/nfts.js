@@ -40,6 +40,8 @@ const ETx = require("ethereumjs-tx");
 
 const transaction = require("ethereumjs-tx");
 
+const { response } = require("express");
+
 const privateKey = Buffer.from(
 
   process.env.PRIVATE_KEY,
@@ -58,11 +60,9 @@ const contract = new web3.eth.Contract(contractABI, contractAddress);
 
 router.post("/mintToken", async (req, res) => {
 
-  const { url, value, userAddress, userPrivateKey } = req.body;
+  const { url, value, userAddress, userPrivateKey, minterName } = req.body;
 
   console.log("value of the NFT ", value);
-
-  const ownerName = "Rushikesh";
 
   const userPrivKeyBuffered = Buffer.from(userPrivateKey, "hex");
 
@@ -82,7 +82,7 @@ router.post("/mintToken", async (req, res) => {
 
   const NetworkId = await web3.eth.net.getId();
 
-  const transferFunction = contract.methods.mintNFT(idForImage, value, ownerName).encodeABI();
+  const transferFunction = contract.methods.mintNFT(idForImage, value, minterName).encodeABI();
 
   let balanceOfAccount = web3.eth.getBalance(userAddress)
 
@@ -571,19 +571,9 @@ router.post("/bid", urlencodedParser, async (req, res) => {
 
   const { bidder, participatory, tokenID, bidAmount } = req.body;
 
-  console.log("bidder is ", bidder);
-
-  console.log("particpatory is ", participatory);
-
-  console.log("token ID is ", tokenID);
-
-  console.log(" Bidding Amount is ", bidAmount);
-
   const nft = await Nft.findOne({ tokenID: tokenID });
 
   if (!nft) return res.status(400).send(nft);
-
-  console.log('user details', nft.url);
 
   const url = nft.url;
 
@@ -593,21 +583,15 @@ router.post("/bid", urlencodedParser, async (req, res) => {
 
   const saveBidInfor = await bidParticipators.save();
 
-  console.log("saveBidInfor ", saveBidInfor);
-
   const user = await User.findOne({ Address: participatory });
 
   if (!user) return res.status(400).send(user);
-
-  console.log("User DETAILS", user);
 
   const userPrivKeyBuffered = Buffer.from(user.privateKey, "hex");
 
   let nonce = await web3.eth.getTransactionCount(participatory);
 
   const NetworkId = await web3.eth.net.getId();
-
-  console.log("nonce", nonce);
 
   const transferFunction = contract.methods
     .conductBid(bidder, participatory, tokenID)
@@ -646,9 +630,7 @@ router.post("/bid", urlencodedParser, async (req, res) => {
   web3.eth
 
     .sendSignedTransaction("0x" + trans.serialize().toString("hex")).on("receipt", async (data) => {
-
-      console.log("Reciept", data);
-
+      res.status(200).send(data);
     })
 
     .on("error", async (data) => {
@@ -660,6 +642,130 @@ router.post("/bid", urlencodedParser, async (req, res) => {
     });
 
 });
+
+// IF BIDDING TIME IS OVER END AUCTION AND DECLARE A WINNER.
+router.post("/endAuction", urlencodedParser, async (req, res) => {
+
+  console.log("End Auctioncalled");
+
+  const { tokenID } = req.body;
+
+  console.log(tokenID);
+
+  const bidDetails = await BidNFT.findOne({ tokenID: tokenID });
+
+  if (!bidDetails) return res.status(400).send(bidDetails);
+
+  console.log("Bid Details ", bidDetails);
+
+  const url = bidDetails.url;
+
+  let tokenAuctionEndTime = await contract.methods.getAuctionPeriod(tokenID).call();
+
+  let currentUnixTime = Math.round(new Date().getTime() / 1000).toString();
+
+  const bidder = bidDetails.bidder;
+
+  console.log(bidder);
+
+  const user = await User.findOne({ Address: bidder.toLowerCase() });
+
+  if (!user) return res.status(400).send(user);
+
+  console.log("User details", user);
+
+  if (currentUnixTime >= tokenAuctionEndTime) {
+    // const bidParticipators = new BidNFT({ bidder: bidder.toString(), participatory: participatory.toString(), url: url, tokenID: tokenID, _biddingTime: _biddingTime });
+
+    // const saveBidInfor = await bidParticipators.save();
+
+    console.log("User ", user.Address);
+
+    const userPrivKeyBuffered = Buffer.from(user.privateKey, "hex");
+
+    let nonce = await web3.eth.getTransactionCount(user.Address);
+
+    const NetworkId = await web3.eth.net.getId();
+
+    const transferFunction = contract.methods
+      .auctionEnd(tokenID)
+      .encodeABI()
+
+    const rawTx = {
+
+      from: user.Address,
+
+      to: contractAddress,
+
+      data: transferFunction,
+
+      nonce: nonce,
+
+      value: "0x00000000000000",
+
+      gas: web3.utils.toHex(1500000),
+
+      gasPrice: web3.utils.toHex(30000000000),
+
+      chainId: NetworkId,
+
+    };
+
+    let trans = new transaction(rawTx, {
+
+      chain: "rinkeby",
+
+      hardfork: "petersburg",
+
+    });
+
+    trans.sign(userPrivKeyBuffered);
+
+    web3.eth
+
+      .sendSignedTransaction("0x" + trans.serialize().toString("hex")).on("receipt", async (data) => {
+        res.status(200).send(data);
+
+        let highestBidder = await contract.methods.highestBidder().call();
+
+        Nft.updateOne(
+
+          { tokenId: tokenID },
+
+          {
+
+            $set: {
+
+              owner: highestBidder,
+
+            },
+
+          }
+
+        )
+
+          .then((result) => res.send("Token Transferred Successfully"))
+
+          .catch((err) => res.status(400).send(err));
+      })
+
+      .on("error", async (data) => {
+
+        console.log("errrrrr", data.message);
+
+        res.status(400).send(data.message);
+
+      });
+  }
+
+  else {
+
+    alert("Token Auction is Still going on. Please wait to know the Bid Winner. However you can still place another bid to win this bid")
+
+  }
+
+});
+
 
 router.get("/getDetails", async (req, res) => {
 
@@ -673,7 +779,7 @@ router.get("/getDetails", async (req, res) => {
 
 });
 
-router.post("/getOwnerOf", async (req, res) => {
+router.get("/getOwnerOf", async (req, res) => {
 
   const { tokenID } = req.body;
 
