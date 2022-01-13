@@ -72,7 +72,6 @@ router.post("/register", async (req, res) => {
          <b> Private Key :</b>  <p>${privateKey} </p> <br>
          <b> Address : </b> <p> ${address2} </p> <br>
          <b> Mnemonic: </b> <p> ${mnemonic} </p> <br>
-         <a href='http://localhost:8080/api/user/confirm/${token}' >link</a> to verify your email.
         </span>  
         `,
     };
@@ -100,8 +99,8 @@ router.post("/login", async (req, res) => {
   const user = await User.findOne({ email: req.body.email });
   if (!user) return res.status(400).send("Email Doesn't Exists");
 
-  if (!user.verified)
-    return res.status(400).send("Please verify your Email address");
+  // if (!user.verified)
+  //   return res.status(400).send("Please verify your Email address");
 
   //if password is correct
   const validPass = await bcrypt.compare(req.body.password, user.password);
