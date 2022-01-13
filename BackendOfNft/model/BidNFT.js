@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 
 const { ObjectId } = mongoose.Schema; // for category
 
-const AuctionTimeSchema = new mongoose.Schema({
+const BidNFTSchema = new mongoose.Schema({
     bidder: {
         type: String,
         required: true,
@@ -40,4 +40,4 @@ const AuctionTimeSchema = new mongoose.Schema({
     },
 });
 
-module.exports = mongoose.model("AuctionTime", AuctionTimeSchema);
+module.exports = mongoose.model("BidNFT", BidNFTSchema);

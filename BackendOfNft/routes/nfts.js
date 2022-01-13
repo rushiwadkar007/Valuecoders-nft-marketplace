@@ -8,7 +8,11 @@ const TokenImageModel = require("../model/TokenImage");
 
 const AuctionTime = require("../model/AuctionTime.js");
 
+const BidNFT = require("../model/BidNFT.js");
+
 const Web3 = require("web3");
+
+const request = require('request');
 
 var express = require('express');
 
@@ -172,7 +176,7 @@ router.post("/mintToken", async (req, res) => {
     });
 });
 
-
+// PURCHASE TOKENS - USE OF BUY TOKEN IS PREFERRED.
 router.post("/purchaseToken", urlencodedParser, async (req, res) => {
 
   console.log("Send Transfer called");
@@ -315,6 +319,7 @@ router.post("/purchaseToken", urlencodedParser, async (req, res) => {
 
     res.status(400).send(err.message);
   }
+
 });
 
 // SET AUCTION TIME PERIOD
@@ -549,6 +554,103 @@ router.post("/buyToken", urlencodedParser, async (req, res) => {
       res.status(200).send(data);
 
     })
+    .on("error", async (data) => {
+
+      console.log("errrrrr", data.message);
+
+      res.status(400).send(data.message);
+
+    });
+
+});
+
+// BID PLACING API ENDPOINT.
+router.post("/bid", urlencodedParser, async (req, res) => {
+
+  console.log("Send setTimeAuction called");
+
+  const { bidder, participatory, tokenID, bidAmount } = req.body;
+
+  console.log("bidder is ", bidder);
+
+  console.log("particpatory is ", participatory);
+
+  console.log("token ID is ", tokenID);
+
+  console.log(" Bidding Amount is ", bidAmount);
+
+  const nft = await Nft.findOne({ tokenID: tokenID });
+
+  if (!nft) return res.status(400).send(nft);
+
+  console.log('user details', nft.url);
+
+  const url = nft.url;
+
+  let _biddingTime = await contract.methods.getAuctionPeriod(tokenID).call();
+
+  const bidParticipators = new BidNFT({ bidder: bidder.toString(), participatory: participatory.toString(), url: url, tokenID: tokenID, _biddingTime: _biddingTime });
+
+  const saveBidInfor = await bidParticipators.save();
+
+  console.log("saveBidInfor ", saveBidInfor);
+
+  const user = await User.findOne({ Address: participatory });
+
+  if (!user) return res.status(400).send(user);
+
+  console.log("User DETAILS", user);
+
+  const userPrivKeyBuffered = Buffer.from(user.privateKey, "hex");
+
+  let nonce = await web3.eth.getTransactionCount(participatory);
+
+  const NetworkId = await web3.eth.net.getId();
+
+  console.log("nonce", nonce);
+
+  const transferFunction = contract.methods
+    .conductBid(bidder, participatory, tokenID)
+    .encodeABI()
+
+  const rawTx = {
+
+    from: participatory,
+
+    to: contractAddress,
+
+    data: transferFunction,
+
+    nonce: nonce,
+
+    value: web3.utils.toWei(web3.utils.toBN(bidAmount), 'ether'),
+
+    gas: web3.utils.toHex(1500000),
+
+    gasPrice: web3.utils.toHex(30000000000),
+
+    chainId: NetworkId,
+
+  };
+
+  let trans = new transaction(rawTx, {
+
+    chain: "rinkeby",
+
+    hardfork: "petersburg",
+
+  });
+
+  trans.sign(userPrivKeyBuffered);
+
+  web3.eth
+
+    .sendSignedTransaction("0x" + trans.serialize().toString("hex")).on("receipt", async (data) => {
+
+      console.log("Reciept", data);
+
+    })
+
     .on("error", async (data) => {
 
       console.log("errrrrr", data.message);
