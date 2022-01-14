@@ -33,6 +33,7 @@ app.use(bodyParser.json());
 app.use("/api/user", userRoute);
 app.use("/api/token", nftRoute);
 
-// const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 8080;
 
-app.listen(8080, () => console.log(`Server running...  8080`));
+app.listen(8080, () => console.log(`Server running...  ${PORT}`));
+// mongodb+srv://nilesh:nilneo1601@appdata.qehsi.mongodb.net/NFT?retryWrites=true&w=majority
