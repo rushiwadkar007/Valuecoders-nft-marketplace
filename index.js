@@ -34,6 +34,7 @@ app.use("/api/user", userRoute);
 app.use("/api/token", nftRoute);
 
 const PORT = process.env.PORT || 8080;
+const host = '0.0.0.0';
 
-app.listen(8080, () => console.log(`Server running...  ${PORT}`));
+app.listen(8080, host, () => console.log(`Server running...  ${PORT}`));
 // mongodb+srv://nilesh:nilneo1601@appdata.qehsi.mongodb.net/NFT?retryWrites=true&w=majority
