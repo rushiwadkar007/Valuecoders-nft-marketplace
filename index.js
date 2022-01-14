@@ -33,4 +33,6 @@ app.use(bodyParser.json());
 app.use("/api/user", userRoute);
 app.use("/api/token", nftRoute);
 
-app.listen(8081, () => console.log("Server running at 8080..."));
+const PORT = process.env.PORT || 8080;
+
+app.listen(PORT, () => console.log(`Server running...  ${PORT}`));
