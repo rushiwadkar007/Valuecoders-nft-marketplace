@@ -60,7 +60,7 @@ const contract = new web3.eth.Contract(contractABI, contractAddress);
 
 router.post("/mintToken", async (req, res) => {
 
-  const { url, value, userAddress, userPrivateKey, minterName, description } = req.body;
+  const { url, value, userAddress, userPrivateKey, name, description } = req.body;
 
   const userPrivKeyBuffered = Buffer.from(userPrivateKey, "hex");
 
@@ -78,7 +78,7 @@ router.post("/mintToken", async (req, res) => {
 
   const NetworkId = await web3.eth.net.getId();
 
-  const transferFunction = contract.methods.mintNFT(idForImage, value, minterName).encodeABI();
+  const transferFunction = contract.methods.mintNFT(idForImage, value, name).encodeABI();
 
   let balanceOfAccount = web3.eth.getBalance(userAddress)
 
@@ -138,7 +138,7 @@ router.post("/mintToken", async (req, res) => {
 
         title: idForImage,
 
-        ownerName: minterName,
+        ownerName: name,
 
         description: description
 
