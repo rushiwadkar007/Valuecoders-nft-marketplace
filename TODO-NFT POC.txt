@@ -1,0 +1,52 @@
+TODO Blockchain POC
+
+
+TODO in project 
+ 1 ->IPFS for images
+ 2 ->Edit profile (user details).  -> DONE
+ 3 -> buy/sell NFT 
+ 4 -> Transfer NFT -> DONE
+
+
+-> changes in contrct of nft for buying token , the buyToken should be called by the buyer.
+
+ function buyToken(address payable seller , address  buyer , uint tokenid ) public payable {
+      // seller.transfer(msg.value);
+
+      //transfer and send are not recommended anymore
+
+      bool sent = seller.send(msg.value);
+      require(sent, "Failed to send Ether");
+
+      
+      // (bool sent, bytes memory data) = seller.call{value: msg.value}("");
+      // require(sent, "Failed to send Ether");
+      // transferFrom(seller , buyer , tokenid);
+
+   }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
