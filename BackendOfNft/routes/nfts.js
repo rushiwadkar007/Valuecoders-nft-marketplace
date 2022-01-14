@@ -62,8 +62,6 @@ router.post("/mintToken", async (req, res) => {
 
   const { url, value, userAddress, userPrivateKey, minterName, description } = req.body;
 
-  console.log("value of the NFT ", value);
-
   const userPrivKeyBuffered = Buffer.from(userPrivateKey, "hex");
 
   const tokenImageObj = new TokenImageModel({
@@ -77,8 +75,6 @@ router.post("/mintToken", async (req, res) => {
   const idForImage = JSON.stringify(savedImage._id);
 
   let nonce = await web3.eth.getTransactionCount(userAddress);
-
-  console.log("nonce", nonce);
 
   const NetworkId = await web3.eth.net.getId();
 
@@ -110,8 +106,6 @@ router.post("/mintToken", async (req, res) => {
 
   };
 
-  console.log('rawTx', rawTx);
-
   let trans = new transaction(rawTx, {
 
     chain: "rinkeby",
@@ -120,11 +114,7 @@ router.post("/mintToken", async (req, res) => {
 
   });
 
-  console.log('trans ', trans);
-
   trans.sign(userPrivKeyBuffered);
-
-  console.log('sign trans is done........');
 
   web3.eth
 
@@ -133,7 +123,6 @@ router.post("/mintToken", async (req, res) => {
     .on("receipt", async (data) => {
 
       console.log("Reciept", data.contractAddress);
-
 
       var details = await contract.methods.getTokenDetails().call();
 
@@ -153,15 +142,6 @@ router.post("/mintToken", async (req, res) => {
 
         description: description
 
-        // const payload = {
-        //   url: details.url,
-        //   value: details.value,
-        //   userAddress: userInfo.Address,
-        //   userPrivateKey: userInfo.privateKey,
-        //   name: userInfo.name,
-        //   description: details.description,
-        //   title: details.title,
-        // };
       });
 
       nft
@@ -177,6 +157,7 @@ router.post("/mintToken", async (req, res) => {
 
           res.status(400).send(err);
         });
+
     })
     .on("error", async (data) => {
 
@@ -189,7 +170,9 @@ router.post("/mintToken", async (req, res) => {
       console.log("errrrrr", data.message);
 
       res.status(400).send(data.message);
+
     });
+
 });
 
 // PURCHASE TOKENS - USE OF BUY TOKEN IS PREFERRED.
