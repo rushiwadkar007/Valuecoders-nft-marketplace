@@ -1,53 +1,17 @@
 pragma solidity 0.5.2;
 
+pragma experimental ABIEncoderV2;
+
 import "./ERC721Full.sol";
-import "../ERC20/ERC20.sol";
 
 contract Color is ERC721Full {
-    struct TokenValue {
-        address tokenOwner;
-        uint256 token_id;
-        uint256 value;
-        string name;
-    }
 
-    TokenValue tokn;
-
-    struct NFTDetails {
-        address tokenOwner;
-        uint256 tokenID;
-        uint256 nftMintTime;
-        bool isNFTBiddingDone;
-    }
-
-    struct NFTOwnerDetails {
-        address tokenOwner;
-        uint256 tokenID;
-        string ownerName;
-        uint256 totalTokensMinted;
-    }
-
+    /**
+    * @dev - STATE VARIABLES
+    */
     address owner;
 
     string[] public colors;
-
-    mapping(string => bool) _colorExists;
-
-    mapping(uint256 => NFTDetails) public NFTInfo;
-
-    mapping(uint256 => NFTOwnerDetails) public NFTOwnerInfo;
-
-    mapping(address => mapping(uint256 => NFTDetails)) public nftListByNFTOwner;
-
-    mapping(uint256 => uint256) public tokenBiddingEndTime;
-
-    event Details(address, uint256, uint256, string);
-
-    event NFTMinted(address tokenOwner, uint256 tokenID, uint256 tokenMintTime);
-
-    NFTDetails[][] nfts;
-
-    NFTDetails[] public nftListOfOwner;
 
     address payable public beneficiary;
 
@@ -59,47 +23,170 @@ contract Color is ERC721Full {
 
     uint256 public highestBid;
 
-    mapping(address => uint256) public pendingReturns;
-
     bool bidEnded = false;
 
     bool paymetTransferred = false;
+
+
+    /**
+    * @dev - STRUCTS
+    */
+    struct TokenValue {
+
+        address tokenOwner;
+
+        uint256 token_id;
+
+        uint256 value;
+
+        string name;
+
+    }
+
+    struct NFTDetails {
+
+        address tokenOwner;
+
+        uint256 tokenID;
+
+        uint256 nftMintTime;
+
+        bool isNFTBiddingDone;
+
+    }
+
+    struct NFTOwnerDetails {
+
+        address tokenOwner;
+
+        uint256 tokenID;
+
+        string ownerName;
+
+        uint256 totalTokensMinted;
+
+    }
+
+    struct BidParticipators{
+
+        address[] participatories;
+
+        uint256 tokenID;
+
+        string participatoryName;
+
+        uint256 bidAmount;
+    }
+
+    struct BidParticipator{
+
+        address participatory;
+
+        uint256 tokenID;
+
+        string participatoryName;
+
+        uint256 bidAmount;
+    }
+
+
+    /**
+    * @dev - STATE INSTANCE
+    */
+    TokenValue tokn;
+
+    BidParticipators bidParticipators;
+
+    BidParticipator bidParticipator;
+
+    NFTDetails nftDetails;
+
+    NFTOwnerDetails nftOwnerDetails;
+
+    /**
+    * @dev - ARRAYS
+    */
+    NFTDetails[] public nftListOfOwner;
+
+    BidParticipators[] public participatories;
+
+    BidParticipators[]  public  allBidParticipators;
+
+    BidParticipator[] public enterTokenBidWiseData;
+
+    BidParticipator[] public enterTokenBidWiseData1;
+
+    address[] bidParticipatories;
+
+
+    /**
+    * @dev - MAPPINGS
+    */
+    mapping(string => bool) _colorExists;
+
+    mapping(uint256 => NFTDetails) public NFTInfo;
+
+    mapping(uint256 => NFTOwnerDetails) public NFTOwnerInfo;
+
+    mapping(address => mapping(uint256 => NFTDetails)) public nftListByNFTOwner;
+
+    mapping(uint256 => uint256) public tokenAuctionEndTimeByTokenID;
+
+    mapping(address => uint256) public pendingReturns;
+
+    mapping(address => BidParticipator) public addressWiseParticipatory;
+
+    mapping(uint256 => BidParticipators) public tokenWiseParticipatory;
+
+
+    /**
+    * @dev - EVENTS
+    */
+    event Details(address, uint256, uint256, string);
+
+    event NFTMinted(address tokenOwner, uint256 tokenID, uint256 tokenMintTime);
 
     event HighestBidIncrease(address bidder, uint256 amount);
 
     event AuctionEnded(address winner, uint256 amount);
 
+    event ParticipatoryDetails(address, uint256, string, uint256);
+
+    /**
+    * @dev - CONSTRUCTOR
+    */
     constructor(address payable _beneficiary)
         public
-        ERC721Full("Color", "COLOR")
+        ERC721Full("", "")
     {
         beneficiary = _beneficiary;
     }
 
+
+    /**
+    * @dev - MODIFIER
+    */
     modifier onlyOwner() {
         owner = msg.sender;
 
         _;
     }
 
-    NFTDetails nftDetails;
 
-    NFTOwnerDetails nftOwnerDetails;
-
-    function mint(
-        string memory _color,
+    function mintNFT(
+        string memory _name,
         uint256 _value,
         string memory ownerName
     ) public {
-        require(!_colorExists[_color], "This string already exists");
+        require(!_colorExists[_name], "This string already exists");
 
-        uint256 _id = colors.push(_color);
+        uint256 _id = colors.push(_name);
 
         _mint(msg.sender, _id);
 
         uint256 mintTime = block.timestamp;
 
-        _colorExists[_color] = true;
+        _colorExists[_name] = true;
 
         nftDetails = NFTDetails(msg.sender, _id, mintTime, false);
 
@@ -120,9 +207,10 @@ contract Color is ERC721Full {
 
         nftListByNFTOwner[msg.sender][_id] = nftDetails;
 
-        tokn = TokenValue(msg.sender, _id, _value, _color);
+        tokn = TokenValue(msg.sender, _id, _value, _name);
 
         emit NFTMinted(msg.sender, _id, mintTime);
+
     }
 
     function getTokenDetails()
@@ -161,7 +249,7 @@ contract Color is ERC721Full {
     function transferNFT(
         address seller,
         address payable buyer,
-        uint256 tokenid
+        uint256 tokenID
     ) public returns (bool) {
         require(
             paymetTransferred == true,
@@ -169,11 +257,11 @@ contract Color is ERC721Full {
         );
 
         require(
-            ownerOf(tokenid) != buyer,
+            ownerOf(tokenID) != buyer,
             "Buyer can not be the owner of NFT at this stage."
         );
 
-        safeTransferFrom(seller, buyer, tokenid);
+        safeTransferFrom(seller, buyer, tokenID);
 
         beneficiary = buyer;
 
@@ -182,7 +270,8 @@ contract Color is ERC721Full {
         return true;
     }
 
-    function bidNFT() internal {
+    function bidNFT(address _participatory, uint256 _tokenID, string memory _participatoryName, uint256 _bidAmount) internal {
+       
         require(block.timestamp < auctionEndTime, "auction already ended.");
 
         require(
@@ -192,7 +281,24 @@ contract Color is ERC721Full {
 
         highestBid = msg.value;
 
+        _bidAmount = highestBid;
+
         highestBidder = msg.sender;
+
+        _participatory = highestBidder;
+
+        bidParticipatories.push(_participatory);
+
+        bidParticipators = BidParticipators(bidParticipatories, _tokenID, _participatoryName, _bidAmount);
+
+        participatories.push(bidParticipators);
+
+        for(uint256 i=0; i< tokenWiseParticipatory[_tokenID].participatories.length; i++){
+
+            bidParticipator = BidParticipator(tokenWiseParticipatory[_tokenID].participatories[i], _tokenID, tokenWiseParticipatory[_tokenID].participatoryName, tokenWiseParticipatory[_tokenID].bidAmount);
+
+            enterTokenBidWiseData.push(bidParticipator);
+        }
 
         require(highestBid != 0, "Bidding value is zero, can not be entered!");
 
@@ -216,31 +322,84 @@ contract Color is ERC721Full {
 
         auctionEndTime = block.timestamp + biddingTime;
 
+        tokenAuctionEndTimeByTokenID[tokenID] = auctionEndTime;
+
         return (biddingTime, auctionEndTime);
     }
 
-    function getAuctionPeriod() public view returns (uint256) {
-        return auctionEndTime;
+    function getTokenWiseParticipators(uint256 _tokenID) public returns(BidParticipator [] memory){
+        if(block.timestamp < getAuctionPeriod(_tokenID)){
+
+            for(uint256 i=0; i< enterTokenBidWiseData.length; i++){
+
+                if(_tokenID == enterTokenBidWiseData[i].tokenID){
+
+                enterTokenBidWiseData1.push(enterTokenBidWiseData[i]);
+
+                return enterTokenBidWiseData1;
+
+                }
+
+            }
+        
+        }
+
+        else{
+
+                for(uint256 i=enterTokenBidWiseData1.length;i>=0;i--){
+
+                delete enterTokenBidWiseData1[i-1];
+
+                return enterTokenBidWiseData1;
+
+            }
+
+        }
+           
     }
+
+    function getAuctionPeriod(uint256 tokenID) public view returns (uint256) {
+        return tokenAuctionEndTimeByTokenID[tokenID];
+    }
+
+    /**
+struct BidParticipator{
+
+        address participatory;
+
+        uint256 tokenID;
+
+        string participatoryName;
+
+        uint256 bidAmount;
+    }
+NFTOwnerDetails nftOwnerDetails;
+mapping(uint256 => BidParticipator) public tokenWiseParticipatory;
+event ParticipatoryDetails(address, uint256, string, uint256);
+BidParticipator[] public participatories;
+    */
 
     function conductBid(
         address bidder,
-        address participatory,
-        uint256 tokenID
+        address _participatory,
+        uint256 _tokenID,
+        string memory _participatoryName,
+        uint256 _bidAmount
     ) public payable returns (bool) {
-        getAuctionPeriod();
-
+        
+        getAuctionPeriod(_tokenID);
+ 
         require(
-            nftListByNFTOwner[participatory][tokenID].tokenOwner != bidder,
+            nftListByNFTOwner[_participatory][_tokenID].tokenOwner != bidder,
             "bidder is not the owner of this NFT."
         );
 
         require(
-            nftListByNFTOwner[bidder][tokenID].tokenID == tokenID,
+            nftListByNFTOwner[bidder][_tokenID].tokenID == _tokenID,
             "token ID is wrong. Perhaps this token is not minted yet."
         );
 
-        bidNFT();
+        bidNFT(_participatory, _tokenID, _participatoryName, _bidAmount);
 
         return true;
     }
@@ -283,7 +442,7 @@ contract Color is ERC721Full {
         }
     }
 
-    function getNFTOwner(uint256 tokenID) public view returns (address) {
+    function getNFTBidWinner(uint256 tokenID) public view returns (address) {
         return nftListByNFTOwner[highestBidder][tokenID].tokenOwner;
     }
 
@@ -298,6 +457,7 @@ contract Color is ERC721Full {
             pendingReturns[msg.sender] = amount;
 
             return false;
+            
         }
 
         return true;

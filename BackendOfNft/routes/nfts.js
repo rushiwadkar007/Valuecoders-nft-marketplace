@@ -568,7 +568,7 @@ router.post("/bid", urlencodedParser, async (req, res) => {
 
   console.log("Send setTimeAuction called");
 
-  const { bidder, participatory, tokenID, bidAmount } = req.body;
+  const { bidder, participatory, tokenID, participatoryName, bidAmount } = req.body;
 
   const nft = await Nft.findOne({ tokenID: tokenID });
 
@@ -593,7 +593,7 @@ router.post("/bid", urlencodedParser, async (req, res) => {
   const NetworkId = await web3.eth.net.getId();
 
   const transferFunction = contract.methods
-    .conductBid(bidder, participatory, tokenID)
+    .conductBid(bidder, participatory, tokenID, participatoryName, bidAmount)
     .encodeABI()
 
   const rawTx = {
@@ -639,6 +639,70 @@ router.post("/bid", urlencodedParser, async (req, res) => {
       res.status(400).send(data.message);
 
     });
+
+  // List of Participatories
+  let nonce = await web3.eth.getTransactionCount(bidder);
+
+  const NetworkId = await web3.eth.net.getId();
+
+  console.log("nonce", nonce);
+
+  const transferFunction = contract.methods
+    .getTokenWiseParticipators(tokenID)
+    .encodeABI()
+
+  const rawTx = {
+
+    from: bidder,
+
+    to: contractAddress,
+
+    data: transferFunction,
+
+    nonce: nonce,
+
+    value: "0x00000000000000",
+
+    gas: web3.utils.toHex(1500000),
+
+    gasPrice: web3.utils.toHex(30000000000),
+
+    chainId: NetworkId,
+
+  };
+
+  let trans = new transaction(rawTx, {
+
+    chain: "rinkeby",
+
+    hardfork: "petersburg",
+
+  });
+
+  trans.sign(userPrivKeyBuffered);
+
+  web3.eth
+
+    .sendSignedTransaction("0x" + trans.serialize().toString("hex")).on("receipt", async (data) => {
+
+      console.log("Reciept", data);
+
+    })
+
+    .on("error", async (data) => {
+
+      console.log("errrrrr", data.message);
+
+      res.status(400).send(data.message);
+
+    });
+
+});
+
+// LET PARTICIPATORIES WITHDRAW THEIR FUNDS ONCE AFTER BID ENDS.
+router.post("/getTokenWiseParticipators", urlencodedParser, async (req, res) => {
+
+
 
 });
 
