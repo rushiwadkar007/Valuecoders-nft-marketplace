@@ -641,25 +641,25 @@ router.post("/bid", urlencodedParser, async (req, res) => {
     });
 
   // List of Participatories
-  let nonce = await web3.eth.getTransactionCount(bidder);
+  let nonce1 = await web3.eth.getTransactionCount(bidder);
 
-  const NetworkId = await web3.eth.net.getId();
+  const NetworkId1 = await web3.eth.net.getId();
 
   console.log("nonce", nonce);
 
-  const transferFunction = contract.methods
+  const transferFunction1 = contract.methods
     .getTokenWiseParticipators(tokenID)
     .encodeABI()
 
-  const rawTx = {
+  const rawTrx = {
 
     from: bidder,
 
     to: contractAddress,
 
-    data: transferFunction,
+    data: transferFunction1,
 
-    nonce: nonce,
+    nonce1: nonce,
 
     value: "0x00000000000000",
 
@@ -667,11 +667,11 @@ router.post("/bid", urlencodedParser, async (req, res) => {
 
     gasPrice: web3.utils.toHex(30000000000),
 
-    chainId: NetworkId,
+    chainId: NetworkId1,
 
   };
 
-  let trans = new transaction(rawTx, {
+  let trans1 = new transaction(rawTrx, {
 
     chain: "rinkeby",
 
@@ -683,7 +683,7 @@ router.post("/bid", urlencodedParser, async (req, res) => {
 
   web3.eth
 
-    .sendSignedTransaction("0x" + trans.serialize().toString("hex")).on("receipt", async (data) => {
+    .sendSignedTransaction("0x" + trans1.serialize().toString("hex")).on("receipt", async (data) => {
 
       console.log("Reciept", data);
 
